@@ -14,14 +14,10 @@ const (
 	portScannerVersion = "1.0"
 )
 
-type scanSettings struct {
-	firstPort, lastPort int
-	portTimeout    int
-}
-
 var (
-    settings scanSettings
-    portStatus = make(map[int]bool)
+    portTimeout int
+    portList []int
+    host string
 )
 
 func showTitle () {
@@ -29,78 +25,56 @@ func showTitle () {
 }
 
 func showSyntax () {
-
+    fmt.Println ("Syntax: PORTSCAN [-port=<port list>] [-timeout=<period in seconds>] [-host=<host name or IP>]")
 }
 
-func getCommandLineArguments () scanSettings {
+func getCommandLineArguments () int {
 	var ports string
-	
 
-    //port
-	flag.StringVar(&ports, "port", "", "Specifies the ports to be scanned.")
-
-    portList := strings.Split(ports, ",")
-
-    for _, port := range portList {
-        
-        portNumber, err := strconv.Atoi(port)
-        if err == nil {
-            portStatus[portNumber] = false
-        } else {
-            fmt.Printf ("Invalid port specified ('%s').\n", port)
-        }
-   
-    }
+    // host
+    flag.StringVar (&host, "host", "golang.org:8080", "Specifies host URL or IP")
 
     //timeout
 	portTimeout := flag.Int ("timeout", 1, "Time allowed for TCP reponse (in seconds).")
 
-    *portTimeout=5
-	if (*portTimeout <= 0) {
+   	if (*portTimeout <= 0) {
 		*portTimeout = 1
 	}
- 
 
-	settings.portTimeout = *portTimeout
-	return settings
-}
+    fmt.Printf ("Host:'%s' (Timeout %ds)\n\n", host, *portTimeout)
 
-func tcpmultipleconnect (ip string, ports []string) map[string]string {
-    // check emqx 1883, 8083 port
+    //port
+	flag.StringVar(&ports, "port", "", "Specifies the ports to be scanned.")
 
-    results := make(map[string]string)
-    for _, port := range ports {
-        address := net.JoinHostPort(ip, port)
-        // 3 second timeout
-        conn, err := net.DialTimeout("tcp", address, 3*time.Second)
-        if err != nil {
-            results[port] = "failed"
-            // todo log handler
-        } else {
-            if conn != nil {
-                results[port] = "success"
-                _ = conn.Close()
+    allPorts := strings.Split(ports, ",")
+
+    for _, portstr := range allPorts {
+        if len(portstr) > 0 {
+            fmt.Printf ("'%s' ", portstr)
+            port, err := strconv.Atoi(portstr)
+            if err == nil {
+                portList = append(portList, int(port))
             } else {
-                results[port] = "failed"
+                fmt.Printf ("Invalid port specified ('%d').\n", port)
             }
         }
     }
-    return results
+
+    portList = append(portList, 30000)
+    portList = append(portList, 30001)
+    return len(portList)
 }
 
-func tcpconnect(host string, ports []string) {
-    for _, port := range ports {
-        timeout := time.Second
-        conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
-        if err != nil {
-            fmt.Println("Connecting error:", err)
-        }
-        if conn != nil {
-            defer conn.Close()
-            fmt.Println("Opened", net.JoinHostPort(host, port))
-        }
+func tcpConnect(host string, port string) {
+    conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), time.Duration(portTimeout))
+    if err != nil {
+        fmt.Println("Connecting error:", err)
     }
-}
+    if conn != nil {
+        defer conn.Close()
+        fmt.Println("Opened", net.JoinHostPort(host, port))
+    }
+ }
 
 func main () {
 	showTitle ()
@@ -108,7 +82,15 @@ func main () {
 		showSyntax ()
 		os.Exit(0)
 	}
+ 
+	countPorts := getCommandLineArguments ()
 
-	settings = getCommandLineArguments ()
-	
+    if countPorts == 0 {
+        fmt.Println ("Error: No valid ports specified.")
+        os.Exit(-1)
+    }
+    // now iterate over all defined ports
+    for port,_ := range portList {
+        tcpConnect (host, fmt.Sprintf("%d", port))
+    }
 }
