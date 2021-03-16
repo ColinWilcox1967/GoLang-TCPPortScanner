@@ -5,7 +5,9 @@ import (
 	"time"
 	"net"
 	"flag"
+    "strings"
 	"os"
+    "strconv"
 )
 
 const (
@@ -17,8 +19,10 @@ type scanSettings struct {
 	portTimeout    int
 }
 
-var settings scanSettings
-
+var (
+    settings scanSettings
+    portStatus = make(map[int]bool)
+)
 
 func showTitle () {
 	fmt.Printf ("TCP/IP Port Scanner (version %s)\n", portScannerVersion)
@@ -32,11 +36,30 @@ func getCommandLineArguments () scanSettings {
 	var ports string
 	
 
-	flag.StringVar(&ports, "ports", "", "Specifies the ports to be scanned.")
+    //port
+	flag.StringVar(&ports, "port", "", "Specifies the ports to be scanned.")
+
+    portList := strings.Split(ports, ",")
+
+    for _, port := range portList {
+        
+        portNumber, err := strconv.Atoi(port)
+        if err == nil {
+            portStatus[portNumber] = false
+        } else {
+            fmt.Printf ("Invalid port specified ('%s').\n", port)
+        }
+   
+    }
+
+    //timeout
 	portTimeout := flag.Int ("timeout", 1, "Time allowed for TCP reponse (in seconds).")
+
+    *portTimeout=5
 	if (*portTimeout <= 0) {
 		*portTimeout = 1
 	}
+ 
 
 	settings.portTimeout = *portTimeout
 	return settings
@@ -81,7 +104,7 @@ func tcpconnect(host string, ports []string) {
 
 func main () {
 	showTitle ()
-	if  len(os.Args[1:]) == 0 {
+	if  len(os.Args[1:]) == 3 {
 		showSyntax ()
 		os.Exit(0)
 	}
