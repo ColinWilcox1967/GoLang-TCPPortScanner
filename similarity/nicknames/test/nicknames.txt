@@ -1,0 +1,4 @@
+[{"name":"David", "nicknames":["Dave"]},
+ {"name":"Robert", "nicknames":["Bob", "Rob", "Robbie"]},
+ {"name":"William", "nicknames":["Will","Billy","Bill","Willy"]}
+]
