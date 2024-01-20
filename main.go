@@ -19,13 +19,13 @@ const (
 
 var (
     portTimeout int
-    portList []int
+    allPorts []string
     host string
 )
 
 func showTitle () {
-	fmt.Printf ("TCP/IP Port Scanner (version %s)\n", portScannerVersion)
-    fmt.Println("(c) Colin Wilcox 2021.")
+	fmt.Printf ("\nTCP/IP Port Scanner (version %s)\n", portScannerVersion)
+    fmt.Println("(c) 2021 Colin Wilcox")
 }
 
 func showSyntax () {
@@ -48,15 +48,11 @@ func getCommandLineArguments() int {
     flag.Parse()
 
     if (portTimeout <= 0) {
-		portTimeout = 1
+		portTimeout = defaultPortTimeout
 	}
 
     fmt.Printf ("\nHost:'%s' (Timeout %ds).\n\n", host, portTimeout)
-
-   
     
-    var allPorts []string
-
     if ports == "" {
         // scan all ports 0 .. 65535
         for portNumber := 0; portNumber <= 65535; portNumber++ {
@@ -67,6 +63,7 @@ func getCommandLineArguments() int {
         if strings.Contains(ports,",") {
             // -ports=A,B, ... ,D
             allPorts = strings.Split(ports, ",")
+           
         } else 
         if strings.Contains(ports, "-") {
 
@@ -78,23 +75,13 @@ func getCommandLineArguments() int {
             for portNumber := firstPort; portNumber <= lastPort; portNumber++ {
                 allPorts = append(allPorts, fmt.Sprintf("%d", portNumber))
             }
+        
         } else {
             allPorts = append(allPorts, ports)
         }
     }
 
-    for _, portstr := range allPorts {
-        if len(portstr) > 0 {
-            port, err := strconv.Atoi(portstr)
-            if err == nil {
-                portList = append(portList, int(port))
-            } else {
-                fmt.Printf ("Invalid port specified ('%d').\n", port)
-            }
-        }
-    }
-   
-    return len(portList)
+    return len(allPorts)
 }
 
 func tcpConnect(host string, port string) bool {
@@ -127,14 +114,16 @@ func main () {
   
     // now iterate over all defined ports
     countOpenPorts:=0
-    for port,_ := range portList {
-        portStr := fmt.Sprintf("%d", port)
+
+    fmt.Println ("Scanning ports ...")
+    for _, portStr := range allPorts {
+      //  port := fmt.Sprintf("%d", portStr)
         if tcpConnect (host, portStr) {
             fmt.Println("Open port : ", net.JoinHostPort(host, portStr))
             countOpenPorts++
         }
     }
-
+   
     if countOpenPorts == 0 {
         fmt.Println("No open ports found.")
     }
