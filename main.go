@@ -32,24 +32,28 @@ func showSyntax () {
     fmt.Println ("Syntax: PORTSCAN [-port=<port list>] [-timeout=<period in seconds>] [-host=<host name or IP>]")
 }
 
-func getCommandLineArguments () int {
+func getCommandLineArguments() int {
 	var ports string
 
     // host
     flag.StringVar (&host, "host", defaultHostIP, "Specifies host URL or IP.")
 
     //timeout
-	portTimeout := flag.Int ("timeout", defaultPortTimeout, "Time allowed for TCP response (in seconds).")
-
-   	if (*portTimeout <= 0) {
-		*portTimeout = 1
-	}
-
-    fmt.Printf ("\nHost:'%s' (Timeout %ds).\n\n", host, *portTimeout)
+	flag.IntVar(&portTimeout, "timeout", defaultPortTimeout, "Time allowed for TCP response (in seconds).")
 
     //port
 	flag.StringVar(&ports, "port", defaultPort, "Specifies the ports to be scanned.")
+  
+     
     flag.Parse()
+
+    if (portTimeout <= 0) {
+		portTimeout = 1
+	}
+
+    fmt.Printf ("\nHost:'%s' (Timeout %ds).\n\n", host, portTimeout)
+
+   
     
     var allPorts []string
 
