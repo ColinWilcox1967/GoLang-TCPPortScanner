@@ -12,6 +12,9 @@ import (
 
 const (
 	portScannerVersion = "1.0"
+    defaultPortTimeout = 30
+    defaultHostIP = "127.0.0.1"
+    defaultPort = "21"
 )
 
 var (
@@ -22,6 +25,7 @@ var (
 
 func showTitle () {
 	fmt.Printf ("TCP/IP Port Scanner (version %s)\n", portScannerVersion)
+    fmt.Println("(c) Colin Wilcox 2021.")
 }
 
 func showSyntax () {
@@ -32,21 +36,31 @@ func getCommandLineArguments () int {
 	var ports string
 
     // host
-    flag.StringVar (&host, "host", "golang.org:8080", "Specifies host URL or IP")
+    flag.StringVar (&host, "host", defaultHostIP, "Specifies host URL or IP.")
 
     //timeout
-	portTimeout := flag.Int ("timeout", 1, "Time allowed for TCP reponse (in seconds).")
+	portTimeout := flag.Int ("timeout", defaultPortTimeout, "Time allowed for TCP response (in seconds).")
 
    	if (*portTimeout <= 0) {
 		*portTimeout = 1
 	}
 
-    fmt.Printf ("Host:'%s' (Timeout %ds)\n\n", host, *portTimeout)
+    fmt.Printf ("\nHost:'%s' (Timeout %ds).\n\n", host, *portTimeout)
 
     //port
-	flag.StringVar(&ports, "port", "", "Specifies the ports to be scanned.")
+	flag.StringVar(&ports, "port", defaultPort, "Specifies the ports to be scanned.")
 
-    allPorts := strings.Split(ports, ",")
+    var allPorts []string
+
+    fmt.Println(ports)
+
+    if strings.Contains(ports,",") {
+        allPorts = strings.Split(ports, ",")
+    } else {
+        allPorts = append(allPorts, ports)
+    }
+
+    fmt.Println(allPorts)
 
     for _, portstr := range allPorts {
         if len(portstr) > 0 {
@@ -59,21 +73,24 @@ func getCommandLineArguments () int {
             }
         }
     }
+   
+    fmt.Println(portList)
 
-    portList = append(portList, 30000)
-    portList = append(portList, 30001)
     return len(portList)
 }
 
-func tcpConnect(host string, port string) {
+func tcpConnect(host string, port string) bool {
     conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), time.Duration(portTimeout))
     if err != nil {
-        fmt.Println("Connecting error:", err)
+        return false
     }
     if conn != nil {
         defer conn.Close()
-        fmt.Println("Opened", net.JoinHostPort(host, port))
+       
+        return true
     }
+
+    return false
  }
 
 func main () {
@@ -90,7 +107,16 @@ func main () {
         os.Exit(-1)
     }
     // now iterate over all defined ports
+    countOpenPorts:=0
     for port,_ := range portList {
-        tcpConnect (host, fmt.Sprintf("%d", port))
+        portStr := fmt.Sprintf("%d", port)
+        if tcpConnect (host, portStr) {
+            fmt.Println("Opened", net.JoinHostPort(host, portStr))
+            countOpenPorts++
+        }
+    }
+
+    if countOpenPorts == 0 {
+        fmt.Println("No open ports found.")
     }
 }
