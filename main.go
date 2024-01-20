@@ -14,7 +14,7 @@ const (
 	portScannerVersion = "1.0"
     defaultPortTimeout = 30
     defaultHostIP = "127.0.0.1"
-    defaultPort = "21"
+    defaultPort = ""
 )
 
 var (
@@ -52,19 +52,34 @@ func getCommandLineArguments () int {
 
     var allPorts []string
 
-    fmt.Println(ports)
-
-    if strings.Contains(ports,",") {
-        allPorts = strings.Split(ports, ",")
+    if ports == "" {
+        // scan all ports 0 .. 65535
+        for portNumber := 0; portNumber <= 65535; portNumber++ {
+            allPorts = append(allPorts, fmt.Sprintf("%d", portNumber))
+        }
     } else {
-        allPorts = append(allPorts, ports)
-    }
+        // parse port argument A,B,C or A-B
+        if strings.Contains(ports,",") {
+            // -ports=A,B, ... ,D
+            allPorts = strings.Split(ports, ",")
+        } else 
+        if strings.Contains(ports, "-") {
 
-    fmt.Println(allPorts)
+            // -ports=A-B
+            portRange := strings.Split(ports, "-")
+            firstPort,_ := strconv.Atoi(portRange[0])
+            lastPort,_ := strconv.Atoi(portRange[1])
+
+            for portNumber := firstPort; portNumber <= lastPort; portNumber++ {
+                allPorts = append(allPorts, fmt.Sprintf("%d", portNumber))
+            }
+        } else {
+            allPorts = append(allPorts, ports)
+        }
+    }
 
     for _, portstr := range allPorts {
         if len(portstr) > 0 {
-            fmt.Printf ("'%s' ", portstr)
             port, err := strconv.Atoi(portstr)
             if err == nil {
                 portList = append(portList, int(port))
@@ -74,8 +89,6 @@ func getCommandLineArguments () int {
         }
     }
    
-    fmt.Println(portList)
-
     return len(portList)
 }
 
@@ -106,12 +119,13 @@ func main () {
         fmt.Println ("Error: No valid ports specified.")
         os.Exit(-1)
     }
+  
     // now iterate over all defined ports
     countOpenPorts:=0
     for port,_ := range portList {
         portStr := fmt.Sprintf("%d", port)
         if tcpConnect (host, portStr) {
-            fmt.Println("Opened", net.JoinHostPort(host, portStr))
+            fmt.Println("Open port : ", net.JoinHostPort(host, portStr))
             countOpenPorts++
         }
     }
