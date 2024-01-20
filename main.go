@@ -49,7 +49,8 @@ func getCommandLineArguments () int {
 
     //port
 	flag.StringVar(&ports, "port", defaultPort, "Specifies the ports to be scanned.")
-
+    flag.Parse()
+    
     var allPorts []string
 
     if ports == "" {
